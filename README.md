@@ -1,3 +1,9 @@
+# GangaDeals
+
+Web app (Next.js) para detectar oportunidades de compra orientadas a reventa en el mercado de usados en Perú.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

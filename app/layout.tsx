@@ -14,9 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AutoDeals — Precio del aviso frente al mercado en Lima",
+  title: "GangaDeals — Gangas con margen de reventa | Lima, Perú",
   description:
-    "Compara avisos con una referencia de mercado local. Selección curada para Lima, actualizada dos veces al día.",
+    "Valor justo conservador, reventa estimada y puntuación de oportunidad para autos usados en Perú. Lista orientativa para Lima.",
+  applicationName: "GangaDeals",
 };
 
 export default function RootLayout({

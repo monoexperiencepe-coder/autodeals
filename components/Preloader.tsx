@@ -37,7 +37,7 @@ export function Preloader() {
     >
       <div className="flex flex-col items-center px-6">
         <p className="text-[0.8125rem] font-semibold tracking-[0.14em] text-zinc-500">
-          AutoDeals
+          GangaDeals
         </p>
         <p className="mt-6 text-[0.9375rem] font-medium tracking-[-0.01em] text-zinc-600">
           Analizando oportunidades...
