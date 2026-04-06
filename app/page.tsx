@@ -1,21 +1,28 @@
-import { DealFeed } from "@/components/DealFeed";
-import { Hero } from "@/components/Hero";
-import { getMockDeals } from "@/data/mock-cars";
+import type { Metadata } from "next";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { ExampleDeals } from "@/components/landing/ExampleDeals";
+import { OpportunityTypes } from "@/components/landing/OpportunityTypes";
+import { WhyMotordeals } from "@/components/landing/WhyMotordeals";
+import { FinalCTA } from "@/components/landing/FinalCTA";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 
-export default function Home() {
-  const deals = getMockDeals();
+export const metadata: Metadata = {
+  title: "Motordeals — Encuentra autos que realmente son oportunidad | Lima, Perú",
+  description:
+    "Escáner inteligente de oportunidades automotrices. Detectamos gangas reales con margen de reventa calculado. Lima, Perú.",
+};
 
+export default function LandingPage() {
   return (
-    <div className="min-h-full bg-[#f6f6f7]">
-      <Hero />
-      <DealFeed deals={deals} />
-      <footer className="border-t border-zinc-200/60 bg-white/90 py-10 text-center sm:py-12">
-        <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-zinc-400">GangaDeals</p>
-        <p className="mx-auto mt-3 max-w-lg px-6 text-[0.8125rem] leading-relaxed text-zinc-500 sm:px-8 sm:text-sm">
-          Lista orientativa. Valor justo y reventa son estimaciones a partir de comparables en la misma muestra;
-          revisa el auto y negocia en persona antes de decidir.
-        </p>
-      </footer>
+    <div className="min-h-full bg-zinc-950">
+      <HeroSection />
+      <HowItWorks />
+      <ExampleDeals />
+      <OpportunityTypes />
+      <WhyMotordeals />
+      <FinalCTA />
+      <LandingFooter />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export function EmailCapture() {
       />
       <button
         type="submit"
-        className="h-12 min-h-12 shrink-0 rounded-2xl bg-zinc-900 px-7 text-[0.9375rem] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.08)] transition hover:bg-zinc-800 hover:shadow-[0_2px_4px_rgba(0,0,0,0.06),0_6px_16px_rgba(0,0,0,0.1)] active:translate-y-px"
+        className="h-12 min-h-12 shrink-0 rounded-2xl bg-zinc-900 px-7 text-[0.9375rem] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.1),0_4px_14px_rgba(0,0,0,0.1)] transition-all hover:bg-zinc-800 hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.07),0_8px_20px_rgba(0,0,0,0.12)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
       >
         Recibir alertas
       </button>

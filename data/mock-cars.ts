@@ -21,6 +21,12 @@ import {
 } from "@/lib/vehicle-comparable-rules";
 import { classifyVehicleLiquidityPeru } from "@/lib/vehicle-liquidity-peru";
 import { computePeerMarketMeta, type MarketReferenceTier, type PeerListingInput } from "@/lib/peer-market-price";
+import {
+  computeBusinessOpportunityLayer,
+  deriveBusinessDisplayLabel,
+  type BusinessDisplayLabel,
+  type BusinessOpportunityLayer,
+} from "@/lib/business-opportunity-layer";
 import dealsJson from "../scraper/deals.json";
 
 export type CarListing = {
@@ -129,9 +135,20 @@ export type CarDeal = CarListing & {
   usedConservativePickupFallback: boolean;
   /** Rebaja realista (3–8%) que llevaría a "Ganga real" al mismo modelo de score; ver reglas en `negotiable-ganga`. */
   negotiableToGanga?: NegotiableToGanga;
+  /**
+   * Capa de oportunidad de negocio (orientativa; no altera fairValue ni score). Solo auditoría / detalle.
+   */
+  businessOpportunity?: BusinessOpportunityLayer | null;
+  /** Etiqueta principal de decisión (feed y tarjeta); deriva de la capa de negocio y confianza. */
+  businessDisplayLabel: BusinessDisplayLabel;
+  /** Orden de feed: márgenes de la capa de negocio (0 si no hay capa). */
+  businessNegotiatedMargin: number;
+  businessGrossMargin: number;
+  /** Escenario simulado extra; prioridad dentro de la etiqueta «Negociable». */
+  businessPotentialMargin: number;
 };
 
-type ParsedRow = {
+export type ParsedRow = {
   id: string;
   title: string;
   year?: number;
@@ -159,15 +176,27 @@ type ParsedRow = {
   listingCategory?: string | null;
 };
 
-export function getMockDeals(): CarDeal[] {
-  const rows = Array.isArray(dealsJson) ? (dealsJson as unknown[]) : [];
+export type ScrapeRowEvaluationPair = {
+  raw: DealsJsonRow;
+  deal: CarDeal;
+};
 
+/**
+ * Parse filas del JSON del scraper (mismo criterio que el feed). Omite entradas no objeto.
+ */
+export function parseScrapeRows(rows: unknown[]): {
+  parsed: ParsedRow[];
+  rawRows: DealsJsonRow[];
+  peerInputs: PeerListingInput[];
+} {
   const parsed: ParsedRow[] = [];
+  const rawRows: DealsJsonRow[] = [];
   const peerInputs: PeerListingInput[] = [];
 
   rows.forEach((maybeRow, idx) => {
     if (!maybeRow || typeof maybeRow !== "object") return;
     const row = maybeRow as DealsJsonRow;
+    rawRows.push(row);
 
     const listingUrl = readString(row.link) ?? "about:blank";
     const brand = readString(row.brand);
@@ -214,7 +243,7 @@ export function getMockDeals(): CarDeal[] {
       ...structured,
     });
 
-    const peerRow: PeerListingInput = {
+    peerInputs.push({
       id,
       brand,
       model,
@@ -223,13 +252,19 @@ export function getMockDeals(): CarDeal[] {
       title,
       currency,
       ...structured,
-    };
-    peerInputs.push(peerRow);
+    });
   });
 
+  return { parsed, rawRows, peerInputs };
+}
+
+/**
+ * Misma pipeline de valoración y negocio que el feed, **sin** ordenar (orden = scraper).
+ */
+export function enrichCarDealsFromPeerBatch(parsed: ParsedRow[], peerInputs: PeerListingInput[]): CarDeal[] {
   const metaById = computePeerMarketMeta(peerInputs);
 
-  const enriched: CarDeal[] = parsed.map((p) => {
+  return parsed.map((p) => {
     const peerMeta = metaById.get(p.id);
     const fairValueListingBased = peerMeta?.marketPrice ?? 0;
     const fvCtx = {
@@ -292,6 +327,27 @@ export function getMockDeals(): CarDeal[] {
     });
 
     const liquidityTier = classifyVehicleLiquidityPeru(p.brand, p.model);
+
+    const businessOpportunity =
+      computeBusinessOpportunityLayer({
+        fairValue,
+        askingPrice: p.askingPrice ?? 0,
+        liquidityTier,
+        title: p.title,
+        listingDescription: null,
+        brand: p.brand,
+        engineDisplacementCc: p.engineDisplacementCc,
+        engineClass: p.engineClass,
+      }) ?? undefined;
+
+    const businessDisplayLabel = deriveBusinessDisplayLabel({
+      businessOpportunity,
+      comparableConfidence,
+      marketConfidence,
+    });
+    const businessNegotiatedMargin = businessOpportunity?.negotiatedNetMargin ?? 0;
+    const businessGrossMargin = businessOpportunity?.grossSpreadVsAsk ?? 0;
+    const businessPotentialMargin = businessOpportunity?.potentialMargin ?? 0;
 
     const { resaleValue, potentialMargin } = computeResaleValues(fairValue, p.askingPrice ?? 0);
 
@@ -383,8 +439,31 @@ export function getMockDeals(): CarDeal[] {
       strictComparablesCount,
       usedConservativePickupFallback,
       negotiableToGanga,
+      businessOpportunity,
+      businessDisplayLabel,
+      businessNegotiatedMargin,
+      businessGrossMargin,
+      businessPotentialMargin,
     };
   });
+}
 
-  return sortDealsForFeed(enriched);
+/**
+ * Evalúa un array de filas crudas (p. ej. leídas de `scraper/deals.json`) con la lógica actual del app.
+ */
+export function evaluateDealsFromScrapeRowsUnsorted(rows: unknown[]): CarDeal[] {
+  const { parsed, peerInputs } = parseScrapeRows(rows);
+  return enrichCarDealsFromPeerBatch(parsed, peerInputs);
+}
+
+export function evaluateScrapeRowsWithRaw(rows: unknown[]): ScrapeRowEvaluationPair[] {
+  const { parsed, rawRows, peerInputs } = parseScrapeRows(rows);
+  const deals = enrichCarDealsFromPeerBatch(parsed, peerInputs);
+  return deals.map((deal, i) => ({ raw: rawRows[i]!, deal }));
+}
+
+export function getMockDeals(): CarDeal[] {
+  const rows = Array.isArray(dealsJson) ? (dealsJson as unknown[]) : [];
+  const { parsed, peerInputs } = parseScrapeRows(rows);
+  return sortDealsForFeed(enrichCarDealsFromPeerBatch(parsed, peerInputs));
 }

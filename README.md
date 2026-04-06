@@ -1,6 +1,6 @@
-# GangaDeals
+# Motordeals
 
-Web app (Next.js) para detectar oportunidades de compra orientadas a reventa en el mercado de usados en Perú.
+Encuentra oportunidades reales en el mercado automotriz. Web app (Next.js) para detectar oportunidades de compra orientadas a reventa en el mercado de usados en Perú.
 
 ---
 

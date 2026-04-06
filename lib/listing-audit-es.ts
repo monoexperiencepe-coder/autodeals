@@ -3,6 +3,7 @@
  */
 
 import type { CarDeal } from "@/data/mock-cars";
+import { businessDisplayLabelEs } from "@/lib/business-opportunity-layer";
 import { bargainTierFromScore, bargainTierLabel } from "@/lib/bargain-score";
 import type { DealMarketConfidence } from "@/lib/deal-utils";
 import type { ValuationFamily } from "@/lib/vehicle-comparable-rules";
@@ -52,7 +53,7 @@ export function formatAuditBool(value: boolean | null | undefined): string {
 }
 
 /**
- * Explica en lenguaje claro por qué la etiqueta final puede coincidir o no con el tramo bruto del score.
+ * Explica la valoración clásica (score / bargainTier). La etiqueta visible en la tarjeta es la de negocio.
  */
 export function finalLabelRationaleParagraphsEs(deal: CarDeal): string[] {
   const scoreTier = bargainTierFromScore(deal.dealScore);
@@ -63,15 +64,21 @@ export function finalLabelRationaleParagraphsEs(deal: CarDeal): string[] {
   const chunks: string[] = [];
 
   chunks.push(
+    `En la tarjeta, la etiqueta principal es «${businessDisplayLabelEs(deal.businessDisplayLabel)}» (capa de negocio: márgenes modelados, negociación y confianza). La valoración clásica sigue siendo la referencia técnica siguiente.`,
+  );
+
+  chunks.push(
     `Puntuación ${deal.dealScore}/100. Umbrales base del score: desde 75 «Ganga real», 50–74 «Buena compra», 25–49 «Precio justo», menor de 25 «Sobreprecio». Con esa puntuación, el tramo bruto sería «${labelScore}».`,
   );
 
   if (finalTier !== scoreTier) {
     chunks.push(
-      `La etiqueta mostrada es «${labelFinal}» porque el modelo aplica reglas adicionales de kilometraje vs edad y, en algunos casos, de porcentaje frente al valor justo, que pueden bajar o subir una categoría respecto al tramo bruto.`,
+      `El tramo de valoración mostrado es «${labelFinal}» porque el modelo aplica reglas adicionales de kilometraje vs edad y, en algunos casos, de porcentaje frente al valor justo, que pueden bajar o subir una categoría respecto al tramo bruto.`,
     );
   } else {
-    chunks.push(`La etiqueta «${labelFinal}» coincide con el tramo bruto del score (sin ajuste de etiqueta por esas reglas).`);
+    chunks.push(
+      `El tramo «${labelFinal}» coincide con el tramo bruto del score (sin ajuste de etiqueta por esas reglas).`,
+    );
   }
 
   if (deal.valuationFamily === "pickup" && deal.usedConservativePickupFallback) {

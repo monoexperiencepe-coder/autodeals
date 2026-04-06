@@ -6,7 +6,6 @@ import {
   FAIR_VALUE_LISTING_TO_TRANSACTION_PE,
   liquidityTierLabelEs,
   trimTierLabelEs,
-  type BargainTier,
   type ComparableConfidence,
 } from "@/lib/bargain-score";
 import {
@@ -22,33 +21,43 @@ import {
   hiluxPeruMarketContextParagraphsEs,
   isToyotaHiluxDeal,
 } from "@/lib/peru-hilux-market-es";
+import {
+  type BusinessDisplayLabel,
+  businessDisplayDecisionRationaleEs,
+  businessDisplayLabelEs,
+  businessInsightLineEs,
+} from "@/lib/business-opportunity-layer";
 
-const leftAccentByTier: Record<BargainTier, string> = {
+const leftAccentByBusiness: Record<BusinessDisplayLabel, string> = {
   ganga_real: "border-l-[6px] border-l-emerald-600",
-  buena_compra: "border-l-[5px] border-l-teal-500",
-  precio_justo: "border-l-[5px] border-l-amber-400",
-  sobreprecio: "border-l-[5px] border-l-zinc-300",
+  aprovechable: "border-l-[5px] border-l-teal-500",
+  negociable: "border-l-[5px] border-l-violet-500",
+  margen_bajo: "border-l-[5px] border-l-sky-500",
+  descartar: "border-l-[5px] border-l-zinc-300",
+  revisar_manualmente: "border-l-[5px] border-l-amber-400",
 };
 
-const badgeByTier: Record<BargainTier, string> = {
+const badgeByBusiness: Record<BusinessDisplayLabel, string> = {
   ganga_real:
-    "border border-emerald-200/80 bg-emerald-50/90 text-emerald-950 shadow-sm ring-1 ring-emerald-500/10",
-  buena_compra:
-    "border border-teal-200/80 bg-teal-50/90 text-teal-950 shadow-sm ring-1 ring-teal-500/10",
-  precio_justo:
-    "border border-amber-200/80 bg-amber-50/95 text-amber-950 shadow-sm ring-1 ring-amber-400/10",
-  sobreprecio: "border border-zinc-200/90 bg-zinc-50 text-zinc-700 shadow-sm",
+    "border border-emerald-300/60 bg-gradient-to-br from-emerald-100/80 to-emerald-50/60 text-emerald-900 shadow-[0_1px_2px_rgba(16,185,129,0.12)] ring-1 ring-emerald-500/[0.18]",
+  aprovechable:
+    "border border-teal-200/80 bg-gradient-to-br from-teal-100/60 to-teal-50/50 text-teal-900 shadow-sm ring-1 ring-teal-500/[0.13]",
+  negociable:
+    "border border-violet-200/80 bg-gradient-to-br from-violet-100/60 to-violet-50/50 text-violet-900 shadow-sm ring-1 ring-violet-400/[0.14]",
+  margen_bajo:
+    "border border-sky-200/75 bg-gradient-to-br from-sky-100/55 to-sky-50/50 text-sky-900 shadow-sm ring-1 ring-sky-400/[0.13]",
+  descartar: "border border-zinc-200/90 bg-zinc-50 text-zinc-600 shadow-sm",
+  revisar_manualmente:
+    "border border-amber-200/80 bg-gradient-to-br from-amber-100/60 to-amber-50/50 text-amber-900 shadow-sm ring-1 ring-amber-400/[0.14]",
 };
 
-/** Segunda etiqueta: camino a ganga con negociación acotada (3–8%). */
-const negotiableGangaBadgeClass =
-  "border border-emerald-300/45 bg-gradient-to-br from-emerald-50/90 via-white to-white text-emerald-950 shadow-sm ring-1 ring-emerald-600/12";
-
-const insightAccentByTier: Record<BargainTier, string> = {
+const insightAccentByBusiness: Record<BusinessDisplayLabel, string> = {
   ganga_real: "border-emerald-400/70",
-  buena_compra: "border-teal-400/60",
-  precio_justo: "border-amber-300/80",
-  sobreprecio: "border-zinc-300",
+  aprovechable: "border-teal-400/60",
+  negociable: "border-violet-400/60",
+  margen_bajo: "border-sky-400/60",
+  descartar: "border-zinc-300",
+  revisar_manualmente: "border-amber-400/70",
 };
 
 const kmFmt = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 0 });
@@ -119,30 +128,6 @@ function potentialMarginPresentation(deal: CarDeal) {
   };
 }
 
-/** Una línea clara por listado, alineada con el tier y la brecha / margen. */
-function listingInsightLine(deal: CarDeal): string {
-  const pb = deal.percentBelow;
-  const ask = deal.askingPrice ?? 0;
-  const marginRatio = ask > 0 ? deal.potentialMargin / ask : 0;
-
-  switch (deal.bargainTier) {
-    case "ganga_real":
-      if (pb >= 10 && marginRatio >= 0.06) {
-        return "Precio muy por debajo del mercado con margen sólido.";
-      }
-      if (pb >= 6) {
-        return "Precio claramente por debajo del valor justo, con margen de reventa atractivo.";
-      }
-      return "Precio muy por debajo del mercado con margen sólido.";
-    case "buena_compra":
-      return "Debajo del mercado, pero con margen moderado.";
-    case "precio_justo":
-      return "Alineado con el mercado, sin ventaja clara.";
-    case "sobreprecio":
-      return "Por encima del mercado, no conviene.";
-  }
-}
-
 function comparableFootnote(deal: CarDeal): string {
   const n = deal.marketComparableCount;
   if (n <= 0) {
@@ -153,28 +138,40 @@ function comparableFootnote(deal: CarDeal): string {
   return `Valor justo estimado con ${n} comparables (conservador).`;
 }
 
-function percentColorClass(tier: BargainTier): string {
-  switch (tier) {
+function percentColorByBusiness(bl: BusinessDisplayLabel): string {
+  switch (bl) {
     case "ganga_real":
       return "text-emerald-700";
-    case "buena_compra":
+    case "aprovechable":
       return "text-teal-700";
-    case "precio_justo":
-      return "text-amber-700";
-    case "sobreprecio":
+    case "negociable":
+      return "text-violet-800";
+    case "margen_bajo":
+      return "text-sky-800";
+    case "revisar_manualmente":
+      return "text-amber-800";
+    case "descartar":
+      return "text-zinc-500";
+    default:
       return "text-zinc-500";
   }
 }
 
-function scoreColorClass(tier: BargainTier): string {
-  switch (tier) {
+function scoreColorByBusiness(bl: BusinessDisplayLabel): string {
+  switch (bl) {
     case "ganga_real":
       return "text-emerald-900";
-    case "buena_compra":
+    case "aprovechable":
       return "text-teal-900";
-    case "precio_justo":
+    case "negociable":
+      return "text-violet-900";
+    case "margen_bajo":
+      return "text-sky-900";
+    case "revisar_manualmente":
       return "text-amber-900";
-    case "sobreprecio":
+    case "descartar":
+      return "text-zinc-600";
+    default:
       return "text-zinc-600";
   }
 }
@@ -228,11 +225,13 @@ function formatScorePct(x: number): string {
 }
 
 export function DealCard({ deal }: Props) {
-  const label = bargainTierLabel(deal.bargainTier);
-  const isTop = deal.bargainTier === "ganga_real";
+  const bl = deal.businessDisplayLabel;
+  const businessLabelText = businessDisplayLabelEs(bl);
+  const valuationLabel = bargainTierLabel(deal.bargainTier);
+  const isTop = bl === "ganga_real";
   const adjustmentMessages = marketAdjustmentMessages(deal);
   const b = deal.scoreBreakdown;
-  const insight = hiluxHighLiquidityInsightEs(deal) ?? listingInsightLine(deal);
+  const insight = hiluxHighLiquidityInsightEs(deal) ?? businessInsightLineEs(bl);
   const marginUi = potentialMarginPresentation(deal);
 
   const metricLabelClass =
@@ -248,16 +247,24 @@ export function DealCard({ deal }: Props) {
       target="_blank"
       rel="noopener noreferrer"
       className={[
-        "group block overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition duration-200",
-        "hover:border-zinc-300/90 hover:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)]",
+        "group block overflow-hidden rounded-2xl border border-zinc-200/80 bg-white",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.04)]",
+        "transition-all duration-200 ease-out",
+        "hover:-translate-y-[1px] hover:border-zinc-300/90 hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.1),0_2px_8px_-2px_rgba(0,0,0,0.05)]",
         isTop
-          ? "ring-1 ring-emerald-500/[0.12]"
-          : deal.bargainTier === "buena_compra"
-            ? "ring-1 ring-teal-500/[0.08]"
-            : "",
-        leftAccentByTier[deal.bargainTier],
-        isTop ? "bg-gradient-to-br from-emerald-50/40 via-white to-white" : "",
-        deal.bargainTier === "buena_compra" ? "bg-gradient-to-br from-teal-50/25 via-white to-white" : "",
+          ? "ring-1 ring-emerald-500/[0.18]"
+          : bl === "aprovechable"
+            ? "ring-1 ring-teal-500/[0.1]"
+            : bl === "negociable"
+              ? "ring-1 ring-violet-400/[0.12]"
+              : bl === "margen_bajo"
+                ? "ring-1 ring-sky-400/[0.1]"
+                : "",
+        leftAccentByBusiness[bl],
+        isTop ? "bg-gradient-to-br from-emerald-50/50 via-white to-white" : "",
+        bl === "aprovechable" ? "bg-gradient-to-br from-teal-50/30 via-white to-white" : "",
+        bl === "negociable" ? "bg-gradient-to-br from-violet-50/25 via-white to-white" : "",
+        bl === "margen_bajo" ? "bg-gradient-to-br from-sky-50/30 via-white to-white" : "",
       ].join(" ")}
     >
       <div className="p-6 sm:flex sm:items-start sm:gap-8 lg:gap-10 sm:p-8">
@@ -269,29 +276,19 @@ export function DealCard({ deal }: Props) {
             <div className="flex w-full shrink-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
               <span
                 className={[
-                  "inline-flex w-fit max-w-[min(100%,11rem)] items-center rounded-md px-2.5 py-1 text-[0.6875rem] font-semibold leading-snug tracking-wide",
-                  badgeByTier[deal.bargainTier],
+                  "inline-flex w-fit max-w-[min(100%,14rem)] items-center rounded-md px-2.5 py-1 text-[0.6875rem] font-semibold leading-snug tracking-wide",
+                  badgeByBusiness[bl],
                 ].join(" ")}
               >
-                {label}
+                {businessLabelText}
               </span>
-              {deal.negotiableToGanga ? (
-                <span
-                  className={[
-                    "inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[0.6875rem] font-semibold leading-snug tracking-wide",
-                    negotiableGangaBadgeClass,
-                  ].join(" ")}
-                >
-                  Negociable a ganga
-                </span>
-              ) : null}
             </div>
           </div>
 
           <p
             className={[
-              "mt-4 max-w-xl border-l-2 pl-3 text-[0.9375rem] leading-relaxed text-zinc-600",
-              insightAccentByTier[deal.bargainTier],
+              "mt-4 max-w-xl border-l-[2.5px] pl-3.5 text-[0.9375rem] leading-relaxed text-zinc-600",
+              insightAccentByBusiness[bl],
             ].join(" ")}
           >
             {insight}
@@ -300,23 +297,31 @@ export function DealCard({ deal }: Props) {
           <div
             className={[
               "mt-6 border-t border-zinc-100 pt-6",
-              isTop ? "border-emerald-100/60" : deal.bargainTier === "buena_compra" ? "border-teal-100/50" : "",
+              isTop
+                ? "border-emerald-100/60"
+                : bl === "aprovechable"
+                  ? "border-teal-100/50"
+                  : bl === "negociable"
+                    ? "border-violet-100/50"
+                    : bl === "margen_bajo"
+                      ? "border-sky-100/50"
+                      : "",
             ].join(" ")}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-0">
-              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/60 px-3 py-3 ring-1 ring-zinc-100/70 lg:rounded-none lg:bg-transparent lg:px-0 lg:py-0 lg:pl-0 lg:ring-0">
+              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/70 px-3 py-3 ring-1 ring-zinc-100 lg:rounded-none lg:bg-transparent lg:px-0 lg:py-0 lg:pl-0 lg:ring-0">
                 <p className={metricLabelClass}>Precio del aviso</p>
                 <p className={metricValuePrimaryClass}>{formatMoney(deal.askingPrice, deal.currency)}</p>
               </div>
-              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/60 px-3 py-3 ring-1 ring-zinc-100/70 lg:rounded-none lg:border-l lg:border-zinc-100/80 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
+              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/70 px-3 py-3 ring-1 ring-zinc-100 lg:rounded-none lg:border-l lg:border-zinc-100 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
                 <p className={metricLabelClass}>Valor justo estimado</p>
                 <p className={metricValueSecondaryClass}>{formatMoney(deal.fairValue, deal.currency)}</p>
               </div>
-              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/60 px-3 py-3 ring-1 ring-zinc-100/70 lg:rounded-none lg:border-l lg:border-zinc-100/80 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
+              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/70 px-3 py-3 ring-1 ring-zinc-100 lg:rounded-none lg:border-l lg:border-zinc-100 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
                 <p className={metricLabelClass}>Reventa estimada</p>
                 <p className={metricValueSecondaryClass}>{formatMoney(deal.resaleValue, deal.currency)}</p>
               </div>
-              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/60 px-3 py-3 ring-1 ring-zinc-100/70 lg:rounded-none lg:border-l lg:border-zinc-100/80 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
+              <div className="flex min-h-0 min-w-0 flex-col rounded-lg bg-zinc-50/70 px-3 py-3 ring-1 ring-zinc-100 lg:rounded-none lg:border-l lg:border-zinc-100 lg:bg-transparent lg:px-0 lg:py-0 lg:pl-6 lg:ring-0">
                 <p className={metricLabelClass}>{marginUi.title}</p>
                 <p
                   className={[
@@ -518,8 +523,167 @@ export function DealCard({ deal }: Props) {
                       </div>
                     ))}
                   </dl>
+                  <div className="space-y-2 border-t border-zinc-200/80 bg-slate-50/40 px-2 py-3 sm:px-3">
+                    <p className="font-medium text-zinc-800">Capa negocio — decisión visible</p>
+                    <p className="text-[0.65rem] leading-snug text-zinc-500">
+                      Etiqueta principal del listado. No modifica fairValue ni comparables; el modelo de puntuación
+                      clásico sigue abajo para auditoría.
+                    </p>
+                    <div className="rounded-lg border border-slate-100 bg-white/70 px-2.5 py-2">
+                      <p className={metricLabelClass}>Etiqueta decisión</p>
+                      <p className="mt-0.5 text-[0.8125rem] font-semibold text-zinc-900">{businessLabelText}</p>
+                      <p className="mt-2 text-[0.65rem] leading-relaxed text-zinc-600">
+                        {businessDisplayDecisionRationaleEs(bl, deal.businessOpportunity ?? null)}
+                      </p>
+                    </div>
+                    {deal.businessOpportunity ? (
+                      <>
+                        <dl className="space-y-2">
+                          {(
+                            [
+                              [
+                                "Motivo clasificación (negocio)",
+                                businessDisplayDecisionRationaleEs(bl, deal.businessOpportunity),
+                              ],
+                              [
+                                "Reventa estimada (negocio)",
+                                formatMoney(deal.businessOpportunity.resaleEstimate, deal.currency),
+                              ],
+                              [
+                                "Costo total al precio publicado (ask + recon + transacción)",
+                                `${deal.businessOpportunity.totalCostAtAsk.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Costo total compra negociada + recon + transacción",
+                                `${deal.businessOpportunity.totalCostNegotiated.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Costo total compra potencial + recon + transacción (escenario Negociable)",
+                                `${deal.businessOpportunity.totalCostAtPotentialBuy.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Factor liquidez base (tier)",
+                                deal.businessOpportunity.liquidityFactorBase.toLocaleString("es-PE", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }),
+                              ],
+                              [
+                                "Factor liquidez efectivo (tras marca premium si aplica)",
+                                deal.businessOpportunity.liquidityFactorEffective.toLocaleString("es-PE", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }),
+                              ],
+                              [
+                                "Penalización riesgo (puntos)",
+                                String(deal.businessOpportunity.riskPenaltyPoints),
+                              ],
+                              [
+                                "Penalización marca premium aplicada",
+                                formatAuditBool(deal.businessOpportunity.premiumBrandPenaltyApplied),
+                              ],
+                              [
+                                "Penalización ticket alto (>30k USD) aplicada",
+                                formatAuditBool(deal.businessOpportunity.highTicketPenaltyApplied),
+                              ],
+                              [
+                                "Penalización motor grande aplicada",
+                                formatAuditBool(deal.businessOpportunity.largeEnginePenaltyApplied),
+                              ],
+                              [
+                                "Rechazo duro al ask (reventa ≤ costo al precio publicado + costos)",
+                                formatAuditBool(deal.businessOpportunity.hardRejectionAtAskTriggered),
+                              ],
+                              [
+                                "Rechazo duro operativo (reventa ≤ costo con compra negociada modelada)",
+                                formatAuditBool(deal.businessOpportunity.hardRejectionTriggered),
+                              ],
+                              [
+                                "Rechazo duro compra potencial (reventa ≤ costo compra potencial + recon + txn)",
+                                formatAuditBool(deal.businessOpportunity.hardRejectionAtPotentialBuyTriggered),
+                              ],
+                              [
+                                "Fricción mercado aplicada",
+                                deal.businessOpportunity.marketFrictionApplied
+                                  ? `Sí (×${deal.businessOpportunity.marketFrictionMultiplier})`
+                                  : "No",
+                              ],
+                              [
+                                "Factor negociación (desc. esperado / aviso)",
+                                `${(deal.businessOpportunity.negotiationFactor * 100).toLocaleString("es-PE", {
+                                  maximumFractionDigits: 1,
+                                })}%`,
+                              ],
+                              [
+                                "Señales de negociación (título/texto)",
+                                deal.businessOpportunity.negotiationSignalsDetected ? "Sí" : "No",
+                              ],
+                              [
+                                "Spread bruto vs precio publicado (sin costos operativos)",
+                                `${deal.businessOpportunity.grossSpreadVsAsk.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Precio compra modelado (negociado)",
+                                formatMoney(deal.businessOpportunity.negotiatedPurchasePrice, deal.currency),
+                              ],
+                              [
+                                "Margen neto tras negociación y costos (reventa − costo negociado)",
+                                `${deal.businessOpportunity.negotiatedNetMargin.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Descuento 2.ª mesa sobre precio negociado (150–1000 USD, tope = precio negociado)",
+                                `${deal.businessOpportunity.extraNegotiationDiscount.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Negociable: neto base vs potencial (auditoría)",
+                                deal.businessOpportunity.negociableMarginComparisonEs,
+                              ],
+                              [
+                                "Negociable: mejora simulada (potencial − neto base)",
+                                `${deal.businessOpportunity.negociableNegotiationLiftUsd.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Negociable: por qué cumple predicado (si aplica)",
+                                formatAuditString(deal.businessOpportunity.negociableWhyEligibleEs || null),
+                              ],
+                              [
+                                "Precio compra potencial (ask − descuento simulado)",
+                                `${deal.businessOpportunity.potentialBuyPrice.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Margen neto potencial (reventa − compra potencial − recon − transacción)",
+                                `${deal.businessOpportunity.potentialMargin.toLocaleString("es-PE")} USD`,
+                              ],
+                              [
+                                "Oportunidad tras negociación simulada (predicado numérico)",
+                                formatAuditBool(deal.businessOpportunity.becameOpportunityAfterNegotiation),
+                              ],
+                              [
+                                "Por qué «Negociable» (si aplica)",
+                                formatAuditString(deal.businessOpportunity.negociableExplanationEs || null),
+                              ],
+                              ["Detalle técnico capa negocio", deal.businessOpportunity.businessClassificationDetailEs],
+                            ] as const
+                          ).map(([k, v]) => (
+                            <div
+                              key={k}
+                              className="grid gap-0.5 border-b border-zinc-100/90 pb-2 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(0,11.25rem),1fr] sm:gap-x-4"
+                            >
+                              <dt className={metricLabelClass}>{k}</dt>
+                              <dd className="font-medium text-zinc-700">{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </>
+                    ) : (
+                      <p className="text-[0.65rem] leading-relaxed text-zinc-500">
+                        Sin métricas numéricas de la capa de negocio (valor justo o precio no disponibles).
+                      </p>
+                    )}
+                  </div>
                   <div className="border-t border-zinc-100 pt-3">
-                    <p className={metricLabelClass}>Por qué esta etiqueta final</p>
+                    <p className={metricLabelClass}>Valoración clásica (auditoría)</p>
                     <div className="mt-2 space-y-2 text-zinc-600">
                       {finalLabelRationaleParagraphsEs(deal).map((para, i) => (
                         <p key={i} className="leading-relaxed">
@@ -539,31 +703,36 @@ export function DealCard({ deal }: Props) {
             "mt-8 flex w-full shrink-0 flex-col justify-center rounded-xl border px-6 py-6 text-center sm:mt-0 sm:w-[11rem] sm:min-w-[11rem] sm:max-w-[12rem] sm:px-5",
             isTop
               ? "border-emerald-200/60 bg-emerald-50/35 shadow-sm"
-              : deal.bargainTier === "buena_compra"
+              : bl === "aprovechable"
                 ? "border-teal-200/50 bg-teal-50/25 shadow-sm"
-                : deal.bargainTier === "precio_justo"
-                  ? "border-amber-200/50 bg-amber-50/20"
-                  : "border-zinc-200/80 bg-zinc-50/30",
+                : bl === "negociable"
+                ? "border-violet-200/50 bg-violet-50/20 shadow-sm"
+                : bl === "margen_bajo"
+                  ? "border-sky-200/50 bg-sky-50/25 shadow-sm"
+                  : bl === "revisar_manualmente"
+                    ? "border-amber-200/50 bg-amber-50/20"
+                    : "border-zinc-200/80 bg-zinc-50/30",
           ].join(" ")}
         >
           <p className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-zinc-500">Puntuación</p>
           <p
             className={[
               "mt-2 text-[2.25rem] font-bold tabular-nums leading-none tracking-[-0.04em] sm:text-[2.5rem]",
-              scoreColorClass(deal.bargainTier),
+              scoreColorByBusiness(bl),
               scoreOpacityForComparableConfidence(deal.comparableConfidence),
             ].join(" ")}
           >
             {deal.dealScore}
           </p>
           <p className="mt-1 text-[0.7rem] font-medium text-zinc-400">de 100</p>
-          <p className="mt-4 text-[0.8125rem] font-semibold leading-snug text-zinc-800">{label}</p>
+          <p className="mt-3 text-[0.8125rem] font-semibold leading-snug text-zinc-800">{businessLabelText}</p>
+          <p className="mt-1 text-[0.65rem] leading-snug text-zinc-500">Valoración: {valuationLabel}</p>
           <div className="mt-5 border-t border-zinc-200/70 pt-4">
             <p className="text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">Vs. valor justo</p>
             <p
               className={[
                 "mt-1.5 text-2xl font-semibold tabular-nums tracking-tight",
-                percentColorClass(deal.bargainTier),
+                percentColorByBusiness(bl),
               ].join(" ")}
             >
               {deal.percentBelow.toLocaleString("es-PE", { maximumFractionDigits: 1 })}%
