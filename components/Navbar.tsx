@@ -7,6 +7,7 @@ import { useState } from "react";
 const NAV_LINKS = [
   { href: "/#how-it-works", label: "Cómo funciona" },
   { href: "/deals", label: "Oportunidades" },
+  { href: "/pricing", label: "Precios" },
 ];
 
 function MenuIcon() {

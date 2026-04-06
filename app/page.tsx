@@ -4,6 +4,7 @@ import { HowItWorks } from "@/components/landing/HowItWorks";
 import { ExampleDeals } from "@/components/landing/ExampleDeals";
 import { OpportunityTypes } from "@/components/landing/OpportunityTypes";
 import { WhyMotordeals } from "@/components/landing/WhyMotordeals";
+import { PricingSection } from "@/components/landing/PricingSection";
 import { FinalCTA } from "@/components/landing/FinalCTA";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
@@ -21,6 +22,7 @@ export default function LandingPage() {
       <ExampleDeals />
       <OpportunityTypes />
       <WhyMotordeals />
+      <PricingSection variant="dark" />
       <FinalCTA />
       <LandingFooter />
     </div>
