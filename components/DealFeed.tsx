@@ -3,40 +3,23 @@
 import { useMemo, useState } from "react";
 import type { CarDeal } from "@/data/mock-cars";
 import {
+  BUSINESS_DISPLAY_LABEL_FEED_ORDER,
   BUSINESS_LABELS_DEFAULT_FEED_VISIBLE,
   type BusinessDisplayLabel,
   businessDisplayLabelEs,
 } from "@/lib/business-opportunity-layer";
 import { DealCard } from "@/components/DealCard";
 
-type FeedFilter = "oportunidades" | "gangas" | "todas";
+type FeedFilter = "todas" | "oportunidades" | BusinessDisplayLabel;
 
-const FILTERS: { id: FeedFilter; label: string }[] = [
-  { id: "oportunidades", label: "Solo oportunidades" },
-  { id: "gangas", label: "Solo gangas" },
-  { id: "todas", label: "Todas" },
-];
-
-function labelsForFilter(mode: FeedFilter): Set<BusinessDisplayLabel> | null {
-  switch (mode) {
-    case "oportunidades":
-      return new Set(BUSINESS_LABELS_DEFAULT_FEED_VISIBLE);
-    case "gangas":
-      return new Set<BusinessDisplayLabel>(["ganga_real"]);
-    case "todas":
-      return null;
-  }
-}
-
-/** Feed principal: nunca se muestran sobreprecios (valoración); el resto se filtra por etiqueta de negocio. */
-function excludeSobreprecio(deals: CarDeal[]): CarDeal[] {
-  return deals.filter((d) => d.bargainTier !== "sobreprecio");
-}
+const LABEL_FILTERS: BusinessDisplayLabel[] = [...BUSINESS_DISPLAY_LABEL_FEED_ORDER];
 
 function filterDeals(deals: CarDeal[], mode: FeedFilter): CarDeal[] {
-  const allow = labelsForFilter(mode);
-  if (!allow) return deals;
-  return deals.filter((d) => allow.has(d.businessDisplayLabel));
+  if (mode === "todas") return deals;
+  if (mode === "oportunidades") {
+    return deals.filter((d) => BUSINESS_LABELS_DEFAULT_FEED_VISIBLE.has(d.businessDisplayLabel));
+  }
+  return deals.filter((d) => d.businessDisplayLabel === mode);
 }
 
 type LabelCounts = Record<BusinessDisplayLabel, number>;
@@ -60,12 +43,21 @@ type Props = { deals: CarDeal[] };
 
 const SPARSE_VISIBLE_THRESHOLD = 3;
 
+function chipClass(active: boolean): string {
+  return [
+    "rounded-xl px-2.5 py-2 text-center text-[0.7rem] font-medium leading-snug tracking-tight transition-all sm:px-3 sm:text-[0.8125rem]",
+    active
+      ? "bg-white text-zinc-950 shadow-[0_1px_3px_rgba(0,0,0,0.07),0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/90"
+      : "text-zinc-500 hover:bg-white/50 hover:text-zinc-700",
+  ].join(" ");
+}
+
 export function DealFeed({ deals }: Props) {
   const [filter, setFilter] = useState<FeedFilter>("oportunidades");
 
-  const feedDeals = useMemo(() => excludeSobreprecio(deals), [deals]);
+  const feedDeals = useMemo(() => deals.filter((d) => d.bargainTier !== "sobreprecio"), [deals]);
   const visible = useMemo(() => filterDeals(feedDeals, filter), [feedDeals, filter]);
-  const labelCounts = useMemo(() => countByBusinessLabel(deals), [deals]);
+  const labelCounts = useMemo(() => countByBusinessLabel(feedDeals), [feedDeals]);
   const showSparseHint =
     visible.length > 0 && (visible.length <= SPARSE_VISIBLE_THRESHOLD || feedDeals.length <= SPARSE_VISIBLE_THRESHOLD);
 
@@ -79,8 +71,8 @@ export function DealFeed({ deals }: Props) {
                 Selección de hoy
               </h2>
               <p className="max-w-md text-[0.9375rem] leading-relaxed text-zinc-600">
-                Orden por capa de negocio (reventa modelada, negociación y confianza). La valoración clásica sigue en
-                cada tarjeta para auditoría.
+                Orden por capa de negocio (reventa modelada, negociación y confianza). Filtra por categoría de oportunidad
+                o abre «Todas» / cada etiqueta para auditar el mercado completo.
               </p>
             </div>
             <p className="shrink-0 text-[0.8125rem] font-medium tabular-nums text-zinc-500 sm:pb-0.5">
@@ -94,49 +86,68 @@ export function DealFeed({ deals }: Props) {
                     </span>
                   ) : null}
                 </>
+              ) : filter === "oportunidades" ? (
+                <>
+                  {visible.length} oportunidades
+                  <span className="font-normal text-zinc-400"> · {feedDeals.length} sin sobreprecio</span>
+                </>
               ) : (
                 <>
-                  {visible.length} mostrados
+                  {visible.length} con «{businessDisplayLabelEs(filter)}»
                   <span className="font-normal text-zinc-400"> · {feedDeals.length} sin sobreprecio</span>
                 </>
               )}
             </p>
           </div>
 
-          <div
-            className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-            role="toolbar"
-            aria-label="Filtro de listados"
-          >
-            <div className="flex w-full min-w-0 gap-1 rounded-2xl bg-zinc-100/90 p-1 ring-1 ring-zinc-200/70 sm:max-w-xl">
-              {FILTERS.map(({ id, label }) => {
+          <div className="flex flex-col gap-3" role="toolbar" aria-label="Filtro por categoría de negocio">
+            <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-zinc-400">Vista</p>
+            <div className="flex flex-wrap gap-1.5 rounded-2xl bg-zinc-100/90 p-1.5 ring-1 ring-zinc-200/70">
+              <button
+                type="button"
+                onClick={() => setFilter("oportunidades")}
+                className={chipClass(filter === "oportunidades")}
+                aria-pressed={filter === "oportunidades"}
+              >
+                Oportunidades
+                <span className="mt-0.5 block text-[0.65rem] font-normal text-zinc-400 sm:inline sm:mt-0 sm:before:content-['·'] sm:before:mx-1">
+                  Ganga + Aprov. + Neg.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("todas")}
+                className={chipClass(filter === "todas")}
+                aria-pressed={filter === "todas"}
+              >
+                Todas
+              </button>
+            </div>
+
+            <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-zinc-400">Por etiqueta</p>
+            <div className="flex flex-wrap gap-1.5">
+              {LABEL_FILTERS.map((id) => {
                 const active = filter === id;
+                const n = labelCounts[id];
                 return (
                   <button
                     key={id}
                     type="button"
                     onClick={() => setFilter(id)}
                     className={[
-                      "min-w-0 flex-1 rounded-xl px-2 py-2.5 text-center text-[0.75rem] font-medium leading-snug tracking-tight transition-all sm:px-3 sm:text-[0.8125rem]",
+                      "rounded-xl border px-2.5 py-1.5 text-[0.7rem] font-medium transition-all sm:text-[0.75rem]",
                       active
-                        ? "bg-white text-zinc-950 shadow-[0_1px_3px_rgba(0,0,0,0.07),0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-zinc-200/90"
-                        : "text-zinc-500 hover:bg-white/50 hover:text-zinc-700",
+                        ? "border-emerald-300/80 bg-emerald-50/90 text-emerald-950 ring-1 ring-emerald-500/15"
+                        : "border-zinc-200/80 bg-white/80 text-zinc-600 hover:border-zinc-300 hover:bg-white",
                     ].join(" ")}
                     aria-pressed={active}
                   >
-                    {label}
+                    {businessDisplayLabelEs(id)}
+                    <span className="ml-1 tabular-nums text-zinc-400">({n})</span>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[0.6875rem] leading-relaxed text-zinc-400 sm:max-w-[15rem] sm:shrink-0 sm:text-right">
-              Por defecto: <span className="text-zinc-500">Ganga real</span>,{" "}
-              <span className="text-zinc-500">Aprovechable</span> y{" "}
-              <span className="text-zinc-500">Negociable</span>. Ocultos:{" "}
-              <span className="text-zinc-500">Margen bajo</span>,{" "}
-              <span className="text-zinc-500">Descartar</span> y{" "}
-              <span className="text-zinc-500">Revisar manualmente</span>.
-            </p>
           </div>
         </div>
       </div>
@@ -204,7 +215,7 @@ export function DealFeed({ deals }: Props) {
 
       {showSparseHint ? (
         <p className="mb-5 text-center text-[0.6875rem] leading-relaxed text-zinc-400 sm:mb-6">
-          Pocas coincidencias con el filtro actual
+          Pocas coincidencias con el filtro actual — prueba otra etiqueta o «Todas» para ver más contexto del mercado.
         </p>
       ) : null}
 
@@ -217,10 +228,8 @@ export function DealFeed({ deals }: Props) {
             </>
           ) : (
             <>
-              No hay listados en esta vista. Prueba <span className="font-medium text-zinc-700">Todas</span> para ver también{" "}
-              <span className="font-medium text-zinc-700">Margen bajo</span>,{" "}
-              <span className="font-medium text-zinc-700">Descartar</span> y{" "}
-              <span className="font-medium text-zinc-700">Revisar manualmente</span>.
+              No hay listados en esta vista. Cambia el filtro (p. ej. <span className="font-medium text-zinc-700">Todas</span>{" "}
+              o otra etiqueta) para explorar el resto del mercado analizado.
             </>
           )}
         </p>
